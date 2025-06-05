@@ -1,0 +1,174 @@
+/* css/overlay.css */
+#crosshair-overlay-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* Allows clicks to pass through the container */
+    z-index: 99999999; /* Ensure it's on top of page elements */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#crosshair-main {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* pointer-events: none; /* Crosshair itself should not be interactive */
+}
+
+.crosshair-line {
+    background-color: white; /* Default color, will be set by JS */
+    position: absolute;
+}
+
+.crosshair-line.horizontal {
+    height: 2px; /* Default thickness, will be set by JS */
+    width: 20px; /* Default size, will be set by JS */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.crosshair-line.vertical {
+    width: 2px; /* Default thickness, will be set by JS */
+    height: 20px; /* Default size, will be set by JS */
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Example for a dot crosshair (controlled by JS based on style) */
+#crosshair-dot {
+    width: 4px;
+    height: 4px;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+/* Example for circle (for shotgun) */
+#crosshair-circle {
+    width: 30px; /* default */
+    height: 30px;
+    border: 2px solid white; /* default */
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+}
+
+
+#settings-panel {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background-color: rgba(50, 50, 50, 0.9);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    pointer-events: auto; /* Enable interaction with the panel */
+    z-index: 100000000; /* Above the overlay container's z-index for its children */
+    font-family: Arial, sans-serif;
+    display: none; /* Initially hidden */
+    width: 320px;
+}
+
+#settings-panel.visible {
+    display: block;
+}
+
+#settings-panel h3 {
+    margin-top: 0;
+    text-align: center;
+    border-bottom: 1px solid #666;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+#settings-panel div {
+    margin-bottom: 15px;
+}
+
+#settings-panel label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+#settings-panel input[type="range"],
+#settings-panel select,
+#settings-panel input[type="color"] {
+    width: calc(100% - 20px);
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #555;
+    background-color: #444;
+    color: white;
+    box-sizing: border-box;
+}
+#settings-panel input[type="color"] {
+    padding: 2px; /* Color pickers often have own padding */
+    height: 35px;
+}
+
+
+#settings-panel span {
+    display: inline-block;
+    margin-left: 10px;
+    font-size: 13px;
+}
+
+#settings-panel button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 10px;
+}
+
+#settings-panel button:hover {
+    background-color: #0056b3;
+}
+
+
+#lock-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: rgba(50, 50, 50, 0.8);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: auto; /* Enable interaction with the lock button */
+    z-index: 100000000;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3);
+}
+
+#lock-button:hover {
+    background-color: rgba(80, 80, 80, 0.9);
+}
+
+#lock-button svg {
+    width: 24px;
+    height: 24px;
+}
