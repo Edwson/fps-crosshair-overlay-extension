@@ -1,88 +1,134 @@
-// js/main.js
+// js/main.js (Relevant i18n parts)
+// Ensure i18next is available (e.g. via a global from a script tag, or if this becomes a module)
+// For this subtask, assume i18next is loaded globally perhaps by adding <script src="../node_modules/i18next/dist/umd/i18next.min.js"></script> to index.html
+// The subtask should add this script tag to index.html.
+
+// Global i18next instance
+let i18nInstance;
+
 (async () => {
     // --- Configuration & State ---
     const DEFAULT_SETTINGS = {
         size: 20,
         thickness: 2,
-        color: '#FFFFFF', // White
-        opacity: 0.8, // 80%
+        color: '#FFFFFF',
+        opacity: 0.8,
         style: 'default',
         language: 'en',
         locked: true
-    };
+    }; // Ensure language is in defaults
     let currentSettings = { ...DEFAULT_SETTINGS };
-
     let crosshairElement, settingsPanel, lockButton;
-    let horizontalLine, verticalLine, dotElement, circleElement; // Crosshair parts
+
+    // --- i18next Initialization Function ---
+    async function initI18next(initialLang) {
+        if (!window.i18next) {
+            console.error('i18next is not loaded. Skipping i18n initialization.');
+            return;
+        }
+        const resources = await window.electronAPI.getI18nResources();
+        if (!resources || Object.keys(resources).length === 0) {
+            console.error('No i18n resources loaded from main process. Skipping i18n initialization.');
+            return;
+        }
+
+        i18nInstance = window.i18next.createInstance(); // Create a new instance
+        await i18nInstance.init({
+            lng: initialLang, // Load with current language
+            fallbackLng: 'en',
+            resources: resources,
+            debug: true // Enable debug output
+        });
+        console.log('i18next initialized with resources and language:', initialLang);
+    }
+
+    // --- Localization Update Function ---
+    function updateLocalizedTexts() {
+        if (!i18nInstance || !i18nInstance.isInitialized) {
+            console.warn("i18n instance not ready for updating texts.");
+            return;
+        }
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            el.textContent = i18nInstance.t(key);
+        });
+        // Update specific elements like tooltips if needed
+        if (lockButton) { // Ensure lockButton is defined
+             lockButton.title = currentSettings.locked ? i18nInstance.t('unlockTooltip', 'Unlock Settings') : i18nInstance.t('lockTooltip', 'Lock Settings');
+        }
+        // Update select options if they are localized
+        document.getElementById('crosshair-style').querySelector('option[value="default"]').textContent = i18nInstance.t('styleDefault');
+        document.getElementById('crosshair-style').querySelector('option[value="shotgun"]').textContent = i18nInstance.t('styleShotgun');
+        // ... and for other styles: sniper, assault, smg, lmg, pistol
+        document.getElementById('crosshair-style').querySelector('option[value="sniper"]').textContent = i18nInstance.t('styleSniper');
+        document.getElementById('crosshair-style').querySelector('option[value="assault"]').textContent = i18nInstance.t('styleAssault');
+        document.getElementById('crosshair-style').querySelector('option[value="smg"]').textContent = i18nInstance.t('styleSMG');
+        document.getElementById('crosshair-style').querySelector('option[value="lmg"]').textContent = i18nInstance.t('styleLMG');
+        document.getElementById('crosshair-style').querySelector('option[value="pistol"]').textContent = i18nInstance.t('stylePistol');
+
+        console.log("UI texts updated with current language.");
+    }
 
     // --- Initialization ---
     async function init() {
-        // Load HTML and CSS
-        await loadAssets();
-
-        // Get DOM elements
+        // ... (get DOM elements: crosshairElement, settingsPanel, lockButton)
         crosshairElement = document.getElementById('crosshair-main');
         settingsPanel = document.getElementById('settings-panel');
         lockButton = document.getElementById('lock-button');
-        // Ensure crosshair parts are queryable after HTML is loaded
-        // Note: The HTML structure in overlay.html should be consistent with these IDs/classes
-        // For dynamic crosshair part creation, this would be handled differently.
 
-        // Load settings
-        await loadSettings();
+        await loadSettings(); // Loads language preference too
 
-        // Apply initial settings and translations
-        applyAllSettings();
+        // Initialize i18next BEFORE applying settings that might depend on translations
+        await initI18next(currentSettings.language);
+
+        applyAllSettings(); // Applies visual settings
+        updateLocalizedTexts(); // Apply initial translations
         setupEventListeners();
-        updateLockButton();
-        updatePanelVisibility();
-        applyLanguage(currentSettings.language); // Apply language first
-    }
-
-    async function loadAssets() {
-        // Inject CSS
-        const cssUrl = chrome.runtime.getURL('css/overlay.css');
-        if (!document.getElementById('crosshair-overlay-styles')) {
-            const link = document.createElement('link');
-            link.id = 'crosshair-overlay-styles';
-            link.rel = 'stylesheet';
-            link.type = 'text/css';
-            link.href = cssUrl;
-            document.head.appendChild(link);
-        }
-
-        // Inject HTML
-        if (!document.getElementById('crosshair-overlay-container')) {
-            const htmlUrl = chrome.runtime.getURL('html/overlay.html');
-            const response = await fetch(htmlUrl);
-            const htmlText = await response.text();
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = htmlText;
-            document.body.appendChild(tempDiv.firstChild);
-        }
+        updateLockButton(); // Updates lock button icon and tooltip
+        // updatePanelVisibility(); // Called by updateLockButton
     }
 
     // --- Settings Management ---
     async function loadSettings() {
-        const savedSettings = await chrome.storage.local.get(['crosshairSettings']);
-        if (savedSettings.crosshairSettings) {
-            currentSettings = { ...DEFAULT_SETTINGS, ...savedSettings.crosshairSettings };
+        console.log("loadSettings: Attempting to load from electron-store via IPC.");
+        if (window.electronAPI && typeof window.electronAPI.storeGet === 'function') {
+            const savedSettings = await window.electronAPI.storeGet('crosshairSettings');
+            if (savedSettings) {
+                currentSettings = { ...DEFAULT_SETTINGS, ...savedSettings };
+            } else {
+                currentSettings = { ...DEFAULT_SETTINGS };
+            }
         } else {
-            currentSettings = { ...DEFAULT_SETTINGS }; // Fallback to defaults
+            console.error("electronAPI.storeGet is not available. Using default settings.");
+            currentSettings = { ...DEFAULT_SETTINGS };
+        }
+    }
+    async function saveSettings() {
+        if (window.electronAPI && typeof window.electronAPI.storeSet === 'function') {
+            window.electronAPI.storeSet('crosshairSettings', currentSettings);
+        } else {
+            console.error("electronAPI.storeSet is not available.");
         }
     }
 
-    async function saveSettings() {
-        await chrome.storage.local.set({ crosshairSettings: currentSettings });
-    }
-
     function resetSettings() {
-        currentSettings = { ...DEFAULT_SETTINGS, language: currentSettings.language }; // Keep current language
-        applyAllSettings();
+        // Preserve language preference on reset, or reset it too if desired
+        const langToKeep = currentSettings.language;
+        currentSettings = { ...DEFAULT_SETTINGS, language: langToKeep }; // Keep current language
+        // Or if language should also reset: currentSettings = { ...DEFAULT_SETTINGS };
+
+        if (i18nInstance && i18nInstance.language !== currentSettings.language) {
+            i18nInstance.changeLanguage(currentSettings.language, (err, t) => {
+                if (err) return console.error('Error changing language on reset:', err);
+                updateLocalizedTexts();
+            });
+        }
+        applyAllSettings(); // This should also call updateLocalizedTexts if needed after styles apply
         saveSettings();
         updatePanelVisibility();
-        updateLockButton();
-        // Re-populate form fields with default values
+        updateLockButton(); // This will also call updateLocalizedTexts for tooltip
+
+        // Re-populate form fields with current (possibly reset) settings
         document.getElementById('crosshair-size').value = currentSettings.size;
         document.getElementById('size-value').textContent = `${currentSettings.size}px`;
         document.getElementById('crosshair-thickness').value = currentSettings.thickness;
@@ -91,12 +137,11 @@
         document.getElementById('crosshair-opacity').value = currentSettings.opacity * 100;
         document.getElementById('opacity-value').textContent = `${currentSettings.opacity * 100}%`;
         document.getElementById('crosshair-style').value = currentSettings.style;
+        document.getElementById('language-select').value = currentSettings.language;
     }
-
 
     // --- UI Updates & Event Listeners ---
     function setupEventListeners() {
-        // Settings Panel Controls
         document.getElementById('crosshair-size').addEventListener('input', (e) => {
             currentSettings.size = parseInt(e.target.value);
             document.getElementById('size-value').textContent = `${currentSettings.size}px`;
@@ -126,29 +171,30 @@
 
         document.getElementById('crosshair-style').addEventListener('change', (e) => {
             currentSettings.style = e.target.value;
-            applyCrosshairStyle(); // This will handle predefined styles
+            applyCrosshairStyle();
             saveSettings();
         });
         
-        document.getElementById('language-select').addEventListener('change', (e) => {
-            currentSettings.language = e.target.value;
-            applyLanguage(currentSettings.language);
+        document.getElementById('language-select').addEventListener('change', async (e) => {
+            const newLang = e.target.value;
+            currentSettings.language = newLang;
+            if (i18nInstance) {
+                await i18nInstance.changeLanguage(newLang);
+                updateLocalizedTexts();
+            }
             saveSettings();
         });
 
         document.getElementById('reset-settings-button').addEventListener('click', resetSettings);
 
-        // Lock Button
         lockButton.addEventListener('click', () => {
             currentSettings.locked = !currentSettings.locked;
             updateLockButton();
-            updatePanelVisibility();
-            saveSettings();
+            saveSettings(); // Save lock state
         });
     }
 
     function applyAllSettings() {
-        // Apply to form fields
         document.getElementById('crosshair-size').value = currentSettings.size;
         document.getElementById('size-value').textContent = `${currentSettings.size}px`;
         document.getElementById('crosshair-thickness').value = currentSettings.thickness;
@@ -158,8 +204,8 @@
         document.getElementById('opacity-value').textContent = `${currentSettings.opacity * 100}%`;
         document.getElementById('crosshair-style').value = currentSettings.style;
         document.getElementById('language-select').value = currentSettings.language;
-        
-        applyCrosshairStyle(); // Initial draw
+        applyCrosshairStyle();
+        // updateLocalizedTexts(); // Call after all settings are applied, if any text depends on them.
     }
 
     function updateLockButton() {
@@ -168,90 +214,69 @@
         
         if (currentSettings.locked) {
             lockButton.innerHTML = lockSVG;
-            lockButton.title = getMessage('unlockTooltip'); // Use i18n for tooltips
         } else {
             lockButton.innerHTML = unlockSVG;
-            lockButton.title = getMessage('lockTooltip');
         }
+        // Tooltip is updated in updateLocalizedTexts after language change
+        if (i18nInstance && i18nInstance.isInitialized) {
+             lockButton.title = currentSettings.locked ? i18nInstance.t('unlockTooltip', 'Unlock Settings') : i18nInstance.t('lockTooltip', 'Lock Settings');
+        }
+        updatePanelVisibility();
     }
 
     function updatePanelVisibility() {
+        if (!settingsPanel) return;
         if (currentSettings.locked) {
             settingsPanel.classList.remove('visible');
+            if (window.electronAPI && typeof window.electronAPI.setIgnoreMouseEvents === 'function') {
+                window.electronAPI.setIgnoreMouseEvents(true, { forward: true });
+            } else { console.error("electronAPI.setIgnoreMouseEvents is not available!");}
         } else {
             settingsPanel.classList.add('visible');
+            if (window.electronAPI && typeof window.electronAPI.setIgnoreMouseEvents === 'function') {
+                window.electronAPI.setIgnoreMouseEvents(false);
+            } else { console.error("electronAPI.setIgnoreMouseEvents is not available!");}
         }
     }
 
-    // --- Crosshair Drawing Logic ---
+    // --- Crosshair Drawing Logic (Unchanged) ---
     function applyCrosshairStyle() {
         if (!crosshairElement) return;
-        
-        // Clear previous dynamic elements if any
-        crosshairElement.innerHTML = ''; // Clear previous shapes
-
-        // Apply general opacity
+        crosshairElement.innerHTML = '';
         crosshairElement.style.opacity = currentSettings.opacity;
-
-        // Predefined styles
         let size = currentSettings.size;
         let thickness = currentSettings.thickness;
         let color = currentSettings.color;
 
         switch (currentSettings.style) {
-            case 'sniper': // Fine Cross
-                thickness = 1;
-                // Size remains user-defined or slightly adjusted
-                drawCross(size, thickness, color);
-                break;
-            case 'shotgun': // Circle
-                drawCircle(size * 1.5, thickness, color); // Example: circle size related to main size
-                drawDot(Math.max(2, thickness / 2), color); // Small dot in center
-                break;
-            case 'assault': // Standard cross, use user settings
-                drawCross(size, thickness, color);
-                break;
-            case 'smg': // Small Cross
-                drawCross(Math.max(10, size * 0.75), Math.max(1, thickness * 0.8), color);
-                break;
-            case 'lmg': // Bold Cross
-                drawCross(size, Math.min(10, thickness * 1.5), color);
-                break;
-            case 'pistol': // Dot
-                drawDot(Math.max(3, thickness * 1.5), color); // Dot size related to thickness
-                break;
-            case 'default':
-            default:
-                drawCross(size, thickness, color);
-                break;
+            case 'sniper': drawCross(size, 1, color); break;
+            case 'shotgun': drawCircle(size * 1.5, thickness, color); drawDot(Math.max(2, thickness / 2), color); break;
+            case 'assault': drawCross(size, thickness, color); break;
+            case 'smg': drawCross(Math.max(10, size * 0.75), Math.max(1, thickness * 0.8), color); break;
+            case 'lmg': drawCross(size, Math.min(10, thickness * 1.5), color); break;
+            case 'pistol': drawDot(Math.max(3, thickness * 1.5), color); break;
+            case 'default': default: drawCross(size, thickness, color); break;
         }
     }
 
     function drawCross(size, thickness, color) {
         const horz = document.createElement('div');
         horz.className = 'crosshair-line horizontal';
-        horz.style.width = `${size}px`;
-        horz.style.height = `${thickness}px`;
+        horz.style.width = `${size}px`; horz.style.height = `${thickness}px`;
         horz.style.backgroundColor = color;
         horz.style.left = '50%'; horz.style.top = '50%'; horz.style.transform = 'translate(-50%, -50%)';
-
-
         const vert = document.createElement('div');
         vert.className = 'crosshair-line vertical';
-        vert.style.height = `${size}px`;
-        vert.style.width = `${thickness}px`;
+        vert.style.height = `${size}px`; vert.style.width = `${thickness}px`;
         vert.style.backgroundColor = color;
         vert.style.left = '50%'; vert.style.top = '50%'; vert.style.transform = 'translate(-50%, -50%)';
-        
         crosshairElement.appendChild(horz);
         crosshairElement.appendChild(vert);
     }
 
     function drawDot(size, color) {
         const dot = document.createElement('div');
-        dot.id = 'crosshair-dot'; // Use ID if styles are specific in CSS
-        dot.style.width = `${size}px`;
-        dot.style.height = `${size}px`;
+        dot.style.width = `${size}px`; dot.style.height = `${size}px`;
         dot.style.backgroundColor = color;
         dot.style.borderRadius = '50%';
         dot.style.position = 'absolute';
@@ -261,9 +286,7 @@
     
     function drawCircle(diameter, borderWidth, color) {
         const circle = document.createElement('div');
-        circle.id = 'crosshair-circle'; // Use ID if styles are specific in CSS
-        circle.style.width = `${diameter}px`;
-        circle.style.height = `${diameter}px`;
+        circle.style.width = `${diameter}px`; circle.style.height = `${diameter}px`;
         circle.style.border = `${borderWidth}px solid ${color}`;
         circle.style.borderRadius = '50%';
         circle.style.position = 'absolute';
@@ -272,48 +295,10 @@
         crosshairElement.appendChild(circle);
     }
 
-
-    // --- Language & Localization ---
-    function applyLanguage(lang) {
-        // The chrome.i18n.getMessage uses the browser's UI language by default
-        // or the one set in the extension if `chrome.i18n.setLanguage()` was a thing (it's not directly).
-        // For content scripts, message substitution in HTML via data-i18n attributes is often best.
-        // We simulate language change by re-applying i18n attributes.
-        // The actual language used by `getMessage` is tied to `_locales/{lang}/messages.json` structure.
-        // This function re-populates text content using the selected language's strings.
-        
-        // Forcing the locale for `getMessage` is tricky in content scripts.
-        // Instead, we'll re-run `localizePage` which relies on `chrome.i18n.getMessage`.
-        // The `language-select` value is saved, but `chrome.i18n` itself will use the extension's effective locale.
-        // A more robust solution would involve fetching the specific lang JSON and applying strings manually.
-        // For this example, we rely on chrome.i18n and its standard behavior.
-        // The `localizePage` function (from i18n.js) should be called to update texts.
-        if (typeof localizePage === "function") {
-            localizePage(); // This will use the messages from the manifest's default_locale or browser's locale.
-                            // True dynamic language switching without page reload for all i18n messages from manifest is complex.
-                            // For simplicity, we assume `localizePage` will grab the most current messages.
-                            // Let's update specific elements that are easy to change:
-        }
-        document.querySelector('#settings-panel h3').textContent = getMessage('settingsTitle');
-        document.querySelector('label[for="language-select"]').textContent = getMessage('languageLabel');
-        document.querySelector('label[for="crosshair-style"]').textContent = getMessage('styleLabel');
-        document.querySelector('label[for="crosshair-size"]').textContent = getMessage('sizeLabel');
-        // ... and so on for all labels and buttons.
-        // Update tooltips
-        updateLockButton();
-        // Update option texts (more involved, would require mapping keys to options)
-        const styleSelect = document.getElementById('crosshair-style');
-        styleSelect.querySelector('option[value="default"]').textContent = getMessage('styleDefault');
-        styleSelect.querySelector('option[value="shotgun"]').textContent = getMessage('styleShotgun');
-        // ...etc. for all styles
-
-        document.getElementById('reset-settings-button').textContent = getMessage('resetButton');
-
-    }
-
     // --- Start ---
-    // Ensure this script doesn't run multiple times if injected again by mistake
-    if (!document.getElementById('crosshair-overlay-container')) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
         init();
     }
 })();

@@ -1,0 +1,96 @@
+<!-- index.html (formerly html/overlay.html) -->
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Desktop Overlay</title>
+    <!-- Corrected path to overlay.css -->
+    <link rel="stylesheet" href="css/overlay.css">
+    <!-- Remove old js/i18n.js script tag -->
+    <!-- <script src="js/i18n.js" defer></script> -->
+    <style>
+        /* Ensure html, body take full viewport and are transparent */
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars if content overflows slightly */
+            background-color: transparent; /* Important for Electron transparency */
+        }
+    </style>
+</head>
+<body>
+    <!-- Content from original html/overlay.html -->
+    <div id="crosshair-overlay-container">
+        <div id="crosshair-main">
+            <!-- Crosshair lines/shapes will be dynamically added here by js/main.js -->
+        </div>
+
+        <div id="settings-panel">
+            <h3 data-i18n="settingsTitle">Settings</h3>
+
+            <div>
+                <label for="language-select" data-i18n="languageLabel">Language:</label>
+                <select id="language-select">
+                    <option value="en">English</option>
+                    <option value="ja">日本語</option>
+                    <option value="zh_CN">简体中文</option>
+                    <option value="zh_TW">繁體中文</option>
+                    <option value="ru">Русский</option>
+                    <option value="ko">한국어</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="crosshair-style" data-i18n="styleLabel">Style:</label>
+                <select id="crosshair-style">
+                    <option value="default" data-i18n="styleDefault">Default</option>
+                    <option value="shotgun" data-i18n="styleShotgun">Shotgun (Circle)</option>
+                    <option value="sniper" data-i18n="styleSniper">Sniper (Fine Cross)</option>
+                    <option value="assault" data-i18n="styleAssault">Assault Rifle (Standard)</option>
+                    <option value="smg" data-i18n="styleSMG">SMG (Small Cross)</option>
+                    <option value="lmg" data-i18n="styleLMG">LMG (Bold Cross)</option>
+                    <option value="pistol" data-i18n="stylePistol">Pistol (Dot)</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="crosshair-size" data-i18n="sizeLabel">Size (10-50px):</label>
+                <input type="range" id="crosshair-size" min="10" max="50" value="20">
+                <span id="size-value">20px</span>
+            </div>
+
+            <div>
+                <label for="crosshair-thickness" data-i18n="thicknessLabel">Thickness (1-10px):</label>
+                <input type="range" id="crosshair-thickness" min="1" max="10" value="2">
+                <span id="thickness-value">2px</span>
+            </div>
+
+            <div>
+                <label for="crosshair-color" data-i18n="colorLabel">Color:</label>
+                <input type="color" id="crosshair-color" value="#FFFFFF">
+            </div>
+
+            <div>
+                <label for="crosshair-opacity" data-i18n="opacityLabel">Opacity (0-100%):</label>
+                <input type="range" id="crosshair-opacity" min="0" max="100" value="80">
+                <span id="opacity-value">80%</span>
+            </div>
+
+            <button id="reset-settings-button" data-i18n="resetButton">Reset Settings</button>
+        </div>
+
+        <button id="lock-button" data-i18n-title="lockTooltip">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+        </button>
+    </div>
+
+    <!-- Corrected paths to JS files, and added defer -->
+    <!-- i18n.js will be dealt with later, for now, link it but expect issues or comment out its usage in main.js -->
+    <!-- Load i18next library -->
+    <script src="../node_modules/i18next/dist/umd/i18next.min.js"></script>
+    <!-- Main script for the overlay -->
+    <script src="js/main.js" defer></script>
+</body>
+</html>

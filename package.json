@@ -1,0 +1,24 @@
+{
+  "name": "desktop-overlay-app",
+  "version": "1.0.0",
+  "description": "Desktop overlay application",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "Electron",
+    "Overlay"
+  ],
+  "author": "AI Agent",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^36.5.0"
+  },
+  "dependencies": {
+    "electron-store": "^10.1.0",
+    "i18next": "^25.2.1",
+    "i18next-fs-backend": "^2.6.0"
+  }
+}
